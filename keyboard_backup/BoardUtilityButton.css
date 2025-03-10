@@ -1,0 +1,129 @@
+.keyboard-container {
+    position: fixed;
+    width: calc(100% - 30px); /* Subtracting 30px to account for padding */
+    max-width: 800px;
+    z-index: 2147483647;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    pointer-events: auto;
+    user-select: none;
+}
+
+.drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    cursor: move;
+    background-color: #f5f5f5;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+.close-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    background-color: red;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1;
+    z-index: 1;
+}
+
+.close-button:hover {
+    background-color: darkred;
+}
+
+.keyboard-input {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    width: calc(100% - 16px);
+    padding: 8px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    text-align: left;
+    min-height: 24px;
+}
+
+.keyboard-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.simple-keyboard {
+    width: 100%;
+}
+
+.keyboard-wrapper .hg-theme-default {
+    background-color: #e8f4ea;
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.keyboard-wrapper .hg-button {
+    height: 45px;
+    border-radius: 10px;
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    margin: 3px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    font-family: Arial, sans-serif;
+}
+
+.keyboard-wrapper .hg-button:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+.keyboard-wrapper .hg-button.special-key {
+    background-color: #2c5530;
+    color: white;
+    font-weight: bold;
+}
+
+.keyboard-wrapper .hg-button.special-key:hover {
+    background-color: #1e3d20;
+}
+
+/* Light green styling for special function buttons */
+.keyboard-wrapper .hg-button[data-skbtn="{shift}"],
+.keyboard-wrapper .hg-button[data-skbtn="{enter}"],
+.keyboard-wrapper .hg-button[data-skbtn="{bksp}"],
+.keyboard-wrapper .hg-button[data-skbtn="{spás}"] {
+    background-color: #90EE90;  /* Light green */
+    color: #2c5530;  /* Darker green text for contrast */
+    min-width: 70px;
+    font-weight: bold;
+}
+
+.keyboard-wrapper .hg-button[data-skbtn="{shift}"]:hover,
+.keyboard-wrapper .hg-button[data-skbtn="{enter}"]:hover,
+.keyboard-wrapper .hg-button[data-skbtn="{bksp}"]:hover,
+.keyboard-wrapper .hg-button[data-skbtn="{spás}"]:hover {
+    background-color: #98FB98;  /* Slightly lighter green on hover */
+}
+
+.keyboard-wrapper .hg-button[data-skbtn="{spás}"] {
+    min-width: 200px;
+}
