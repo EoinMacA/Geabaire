@@ -1,0 +1,79 @@
+.board-editor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  height: calc(100vh - 60px); /* Adjust according to header height */
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.cell {
+  border: 1px solid #ccc;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Center content vertically */
+  border-radius: 10px;
+  width: 150px;
+  height: 100px;
+  background-color: #f0f0f0;
+  cursor: move;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s, box-shadow 0.3s;
+  position: relative;
+}
+
+.cell span {
+  font-size: 24px; /* Increase font size */
+  font-weight: bold; /* Make text bold */
+  text-align: center; /* Center text horizontally */
+}
+
+.cell input {
+  width: 70%;
+  font-size: 24px; /* Match input font size to text */
+  font-weight: bold; /* Make input text bold */
+  text-align: center; /* Center input text horizontally */
+}
+
+.cell .edit-button, .cell .delete-button {
+  position: absolute;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 14px; /* Adjust the font size */
+}
+
+.cell .edit-button {
+  top: 5px;
+  right: 5px;
+}
+
+.cell .delete-button {
+  bottom: 5px;
+  right: 5px;
+  background-color: red;
+}
+
+.add-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 24px;
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+}
