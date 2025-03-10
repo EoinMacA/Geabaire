@@ -1,8 +1,14 @@
-import { StyleSheet, View, TouchableOpacity, Text } from "react-native"
+import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import { createPortal } from 'react-dom';
+import Draggable from 'react-draggable';
 import { getContrastingFolderColor, getContrastingTextColor } from "../../partials/accessibility"
 import FAIcon from 'react-native-vector-icons/FontAwesome';
 import { Image } from "expo-image";
 import { Platform } from "react-native";
+import Keyboard from 'react-simple-keyboard';
+import 'react-simple-keyboard/build/css/index.css';
+import './BoardUtilityButton.css';
+import { useState, useRef, useEffect } from 'react';
 
 /**
  * BoardUtilityButton renders a utility button based on the item passed.
@@ -14,10 +20,77 @@ import { Platform } from "react-native";
  * @param {string} props.boardId - The ID of the board.
  * @returns {JSX.Element} A TouchableOpacity component representing the utility button.
  */
-export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPress, boardId }) {
+export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPress, boardId, onKeyPress }) {
     const code = item.label.trim()
-
     const isWeb = Platform.OS === "web";
+    const [showKeyboard, setShowKeyboard] = useState(false);
+    const [layoutName, setLayoutName] = useState("default");
+    const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
+    const [currentInput, setCurrentInput] = useState("");
+    const keyboardRef = useRef(null);
+    const keyboardInstance = useRef(null);
+
+    const onChange = (input) => {
+        console.log("Input changed", input);
+    };
+
+    const handleShift = () => {
+        const newLayoutName = layoutName === "default" ? "shift" : "default";
+        setLayoutName(newLayoutName);
+    };
+
+    const handleKeyDown = (event) => {
+        if (isWeb && keyboardInstance.current) {
+            let button = event.key;
+            
+if (event.altgrKey && event.ctrlKey) {
+    event.preventDefault();
+    // Handle Irish characters (for AltGr or Ctrl+Alt)
+    switch (event.key.toLowerCase()) {
+        case "a": button = "á"; break;
+        case "e": button = "é"; break;
+        case "i": button = "í"; break;
+        case "o": button = "ó"; break;
+        case "u": button = "ú"; break;
+        default: return; // Don't process other AltGr combinations
+    }
+    keyboardInstance.current.handleButtonClicked(button); // Ensure the button is clicked without extra output
+    return; // Prevent further processing
+}
+            
+            // Handle special keys
+            switch (event.key) {
+                case "Shift":
+                    button = "{shift}";
+                    break;
+                case "Backspace":
+                    button = "{bksp}";
+                    break;
+                case "Enter":
+                    button = "{enter}";
+                    break;
+                case " ":
+                    button = "{spás}";
+                    break;
+            }
+
+            // Remove duplicate AltGr handling
+
+            keyboardInstance.current.handleButtonClicked(button);
+        }
+    };
+
+    useEffect(() => {
+        if (showKeyboard) {
+            window.addEventListener('keydown', handleKeyDown);
+        } else {
+            window.removeEventListener('keydown', handleKeyDown);
+        }
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [showKeyboard]);
 
     switch (code) {
         case "<% KEYBOARD>": {
@@ -31,14 +104,95 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                     borderColor={item["border_color"]}
                     backgroundColor={item["background_color"]}
                 /> :
-                <UtilityButton
-                    onPress={() => { /* Todo: add toast? */}}
-                    boardId={boardId}
-                    label={item.hide_label ? null : "méarchlár (ar fáil)"}
-                    image={item.image}
-                    borderColor={"#D8DAE0"}
-                    backgroundColor={"#E0DED8"}
-                />
+                <View>
+                    <UtilityButton
+                        onPress={() => setShowKeyboard(prev => !prev)}
+                        boardId={boardId}
+                        label={item.hide_label ? null : "méarchlár (ar fáil)"}
+                        image={item.image}
+                        borderColor={"#D8DAE0"}
+                        backgroundColor={"#E0DED8"}
+                    />
+                    {showKeyboard && createPortal(
+                        <Draggable handle=".drag-handle" defaultPosition={{x: window.innerWidth/2 - 400, y: window.innerHeight/2 - 200}}>
+                            <div className="keyboard-container" ref={keyboardRef}>
+                                <div className="drag-handle">
+                                    <div className="close-button" onClick={() => setShowKeyboard(false)}>
+                                        X
+                                    </div>
+                                </div>
+                                <div className="keyboard-input">{currentInput || " "}</div>
+                                <div className="keyboard-wrapper">
+                                    <Keyboard
+                                        keyboardRef={r => (keyboardInstance.current = r)}
+                                        className="simple-keyboard"
+                                        layout={{
+                                            default: [
+                                                "á é í ó ú",
+                                                "1 2 3 4 5 6 7 8 9 0",
+                                                "q w e r t y u i o p",
+                                                "a s d f g h j k l {bksp}",
+                                                "{shift} z x c v b n m {enter}",
+                                                "{spás} , .",
+                                            ],
+                                            shift: [
+                                                "Á É Í Ó Ú",
+                                                "1 2 3 4 5 6 7 8 9 0",
+                                                "Q W E R T Y U I O P",
+                                                "A S D F G H J K L {bksp}",
+                                                "{shift} Z X C V B N M {enter}",
+                                                "{spás} , .",
+                                            ]
+                                        }}
+                                        buttonTheme={[
+                                            {
+                                                class: "special-key",
+                                                buttons: "á é í ó ú Á É Í Ó Ú"
+                                            }
+                                        ]}
+                                        display={{
+                                            "{enter}": "⮐",
+                                            "{bksp}": "⌫",
+                                            "{shift}": "⇧",
+                                            "{spás}": "[______________________]"
+                                        }}
+                                        layoutName={layoutName}
+                                        onChange={onChange}
+                                        onKeyPress={(button) => {
+                                            if (button === "{shift}") {
+                                                handleShift();
+                                                return;
+                                            }
+                                            
+                                            if (button === "{enter}") {
+                                                if (currentInput.trim()) {
+                                                    onKeyPress(currentInput.trim());
+                                                    setCurrentInput("");
+                                                }
+                                                return;
+                                            }
+                                            
+                                            setCurrentInput(prev => {
+                                                if (button === "{bksp}") {
+                                                    return prev.slice(0, -1);
+                                                }
+                                                if (button === "{spás}") {
+                                                    return prev + " ";
+                                                }
+                                                return prev + button;
+                                            });
+                                        }}
+                                        value={currentInput}
+                                        theme="hg-theme-default hg-layout-default myTheme"
+                                        physicalKeyboardHighlight={true}
+                                        physicalKeyboardHighlightTextColor="#2c5530"
+                                        physicalKeyboardHighlightBgColor="#e8f4ea"
+                                    />
+                                </div>
+                            </div>
+                        </Draggable>
+                    , document.body)}
+                </View>
             )
         }
 
@@ -55,9 +209,7 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
             )
         }
     }
-
 }
-
 
 /**
  * UtilityButton renders the utility button with a label and an optional image.
@@ -75,7 +227,6 @@ function UtilityButton({ onPress, boardId, label, image, borderColor, background
     const API_LINK = process.env.EXPO_PUBLIC_GEABAIRE_API_LINK ?? "https://api.geabaire.abair.ie/v1/"
 
     const imageLink = `${API_LINK}/images/${boardId}/${image}.webp`
-    //console.log(imageLink)
     const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
     const computedStyle = {
         backgroundColor: backgroundColor,
@@ -110,12 +261,9 @@ function UtilityButton({ onPress, boardId, label, image, borderColor, background
                 style={styles.topRight}
                 color={getContrastingFolderColor(backgroundColor)}
             />
-
         </TouchableOpacity>
     )
 }
-
-
 
 // Styles for the BoardUtilityButton and UtilityButton components
 const styles = StyleSheet.create({
