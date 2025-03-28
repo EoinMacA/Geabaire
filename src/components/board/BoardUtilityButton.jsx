@@ -32,63 +32,86 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
 
     const onChange = (input) => {
         console.log("Input changed", input);
-    };
+        setCurrentInput(input); // Update currentInput here
+      };
 
     const handleShift = () => {
         const newLayoutName = layoutName === "default" ? "shift" : "default";
         setLayoutName(newLayoutName);
     };
 
+    let altGrPressed = false;
+
     const handleKeyDown = (event) => {
         if (isWeb && keyboardInstance.current) {
-            let button = event.key;
-            
-if (event.altgrKey && event.ctrlKey) {
-    event.preventDefault();
-    // Handle Irish characters (for AltGr or Ctrl+Alt)
-    switch (event.key.toLowerCase()) {
-        case "a": button = "á"; break;
-        case "e": button = "é"; break;
-        case "i": button = "í"; break;
-        case "o": button = "ó"; break;
-        case "u": button = "ú"; break;
-        default: return; // Don't process other AltGr combinations
-    }
-    keyboardInstance.current.handleButtonClicked(button); // Ensure the button is clicked without extra output
-    return; // Prevent further processing
-}
-            
-            // Handle special keys
+            event.preventDefault();
+    
+            // Handle Irish characters (for AltGr + vowel) and special characters
+            let button = '';
             switch (event.key) {
+                case "á": button = "á"; break;
+                case "é": button = "é"; break;
+                case "í": button = "í"; break;
+                case "ó": button = "ó"; break;
+                case "ú": button = "ú"; break;
+                case " ": button = " "; break;
+                case ",": button = ","; break;
+                case ".": button = "."; break;
+                case "!": button = "!"; break;
+                case "?": button = "?"; break;
+                case "Enter": button = "{enter}"; break; // Handle physical Enter key
+            }
+    
+            if (button) {
+                console.log("AltGr or Special Key:", button);
+                keyboardInstance.current.handleButtonClicked(button);
+                return;
+            }
+    
+            // Handle normal keys and shift + special characters
+            button = event.key;
+            if (event.shiftKey && (event.key === "!" || event.key === "?")) {
+                console.log("Shift + Special Key:", button);
+                keyboardInstance.current.handleButtonClicked(button);
+                return;
+            }
+    
+            switch (event.key) {
+                case "Control":
+                    return;
                 case "Shift":
                     button = "{shift}";
                     break;
                 case "Backspace":
                     button = "{bksp}";
                     break;
-                case "Enter":
-                    button = "{enter}";
-                    break;
-                case " ":
-                    button = "{spás}";
-                    break;
+                default:
+                    if (!isKeyOnBoard(button)) return;
             }
-
-            // Remove duplicate AltGr handling
-
+    
+            console.log("Normal Key:", button);
             keyboardInstance.current.handleButtonClicked(button);
         }
+    };
+
+    const isKeyOnBoard = (key) => {
+        // Implement logic to check if the key is part of the physical keyboard layout
+        const validKeys = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+        return validKeys.includes(key.toLowerCase());
     };
 
     useEffect(() => {
         if (showKeyboard) {
             window.addEventListener('keydown', handleKeyDown);
+            console.log("Keydown listener added"); // Add this line
         } else {
             window.removeEventListener('keydown', handleKeyDown);
+            console.log("Keydown listener removed"); // Add this line
         }
-
+    
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
+            console.log("Keydown listener removed on cleanup"); // Add this line
         };
     }, [showKeyboard]);
 
@@ -105,14 +128,20 @@ if (event.altgrKey && event.ctrlKey) {
                     backgroundColor={item["background_color"]}
                 /> :
                 <View>
-                    <UtilityButton
-                        onPress={() => setShowKeyboard(prev => !prev)}
-                        boardId={boardId}
-                        label={item.hide_label ? null : "méarchlár (ar fáil)"}
-                        image={item.image}
-                        borderColor={"#D8DAE0"}
-                        backgroundColor={"#E0DED8"}
-                    />
+                <UtilityButton
+                    onPress={() => {
+                        setShowKeyboard(prev => {
+                            const newValue = !prev;
+                            console.log("showKeyboard changed to:", newValue);
+                            return newValue;
+                        });
+                    }}
+                    boardId={boardId}
+                    label={item.hide_label ? null : "méarchlár (ar fáil)"}
+                    image={item.image}
+                    borderColor={"#D8DAE0"}
+                    backgroundColor={"#E0DED8"}
+                />
                     {showKeyboard && createPortal(
                         <Draggable handle=".drag-handle" defaultPosition={{x: window.innerWidth/2 - 400, y: window.innerHeight/2 - 200}}>
                             <div className="keyboard-container" ref={keyboardRef}>
@@ -133,7 +162,8 @@ if (event.altgrKey && event.ctrlKey) {
                                                 "q w e r t y u i o p",
                                                 "a s d f g h j k l {bksp}",
                                                 "{shift} z x c v b n m {enter}",
-                                                "{spás} , .",
+                                                ", . ! ?",
+                                                "{spás}",
                                             ],
                                             shift: [
                                                 "Á É Í Ó Ú",
@@ -141,15 +171,14 @@ if (event.altgrKey && event.ctrlKey) {
                                                 "Q W E R T Y U I O P",
                                                 "A S D F G H J K L {bksp}",
                                                 "{shift} Z X C V B N M {enter}",
-                                                "{spás} , .",
+                                                ", . ! ?",
+                                                "{spás}",
                                             ]
                                         }}
-                                        buttonTheme={[
-                                            {
-                                                class: "special-key",
-                                                buttons: "á é í ó ú Á É Í Ó Ú"
-                                            }
-                                        ]}
+                                        buttonTheme={[{
+                                            class: "special-key",
+                                            buttons: "á é í ó ú Á É Í Ó Ú"
+                                        }]}
                                         display={{
                                             "{enter}": "⮐",
                                             "{bksp}": "⌫",
@@ -163,15 +192,16 @@ if (event.altgrKey && event.ctrlKey) {
                                                 handleShift();
                                                 return;
                                             }
-                                            
+                                        
                                             if (button === "{enter}") {
                                                 if (currentInput.trim()) {
                                                     onKeyPress(currentInput.trim());
-                                                    setCurrentInput("");
+                                                    setCurrentInput(""); // Clear the input state
+                                                    keyboardInstance.current.setInput(""); // Clear the keyboard display
                                                 }
                                                 return;
                                             }
-                                            
+                                        
                                             setCurrentInput(prev => {
                                                 if (button === "{bksp}") {
                                                     return prev.slice(0, -1);
@@ -226,7 +256,7 @@ if (event.altgrKey && event.ctrlKey) {
 function UtilityButton({ onPress, boardId, label, image, borderColor, backgroundColor }) {
     const API_LINK = process.env.EXPO_PUBLIC_GEABAIRE_API_LINK ?? "https://api.geabaire.abair.ie/v1/"
 
-    const imageLink = `${API_LINK}/images/${boardId}/${image}.webp`
+    const imageLink = '${API_LINK}/images/${boardId}/${image}.webp'
     const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
     const computedStyle = {
         backgroundColor: backgroundColor,
