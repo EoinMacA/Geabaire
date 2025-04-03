@@ -12,8 +12,7 @@ import { useState, useRef, useEffect } from 'react';
 
 /**
  * BoardUtilityButton renders a utility button based on the item passed.
- * 
- * @param {Object} props - The properties object.
+ * * @param {Object} props - The properties object.
  * @param {Object} props.item - The utility button item data.
  * @param {Function} props.onKeyboardPress - The function to execute on keyboard press.
  * @param {Function} props.onPluralPress - The function to execute on plural press.
@@ -24,28 +23,30 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
     const code = item.label.trim()
     const isWeb = Platform.OS === "web";
     const [showKeyboard, setShowKeyboard] = useState(false);
-    const [layoutName, setLayoutName] = useState("default");
+    const [isShifted, setIsShifted] = useState(false);
+    const [phoneticMode, setPhoneticMode] = useState(false);
     const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
     const [currentInput, setCurrentInput] = useState("");
     const keyboardRef = useRef(null);
     const keyboardInstance = useRef(null);
 
-    const onChange = (input) => {
-        console.log("Input changed", input);
-        setCurrentInput(input); // Update currentInput here
-      };
+    const layoutName = phoneticMode 
+        ? (isShifted ? 'phoneticShift' : 'phonetic')
+        : (isShifted ? 'shift' : 'default');
 
-    const handleShift = () => {
-        const newLayoutName = layoutName === "default" ? "shift" : "default";
-        setLayoutName(newLayoutName);
+    const onChange = (input) => {
+        setCurrentInput(input);
     };
+
+    const handleShift = () => setIsShifted(prev => !prev);
+    const handlePhonetic = () => setPhoneticMode(prev => !prev);
 
     let altGrPressed = false;
 
     const handleKeyDown = (event) => {
         if (isWeb && keyboardInstance.current) {
             event.preventDefault();
-    
+
             // Handle Irish characters (for AltGr + vowel) and special characters
             let button = '';
             switch (event.key) {
@@ -61,13 +62,13 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                 case "?": button = "?"; break;
                 case "Enter": button = "{enter}"; break; // Handle physical Enter key
             }
-    
+
             if (button) {
                 console.log("AltGr or Special Key:", button);
                 keyboardInstance.current.handleButtonClicked(button);
                 return;
             }
-    
+
             // Handle normal keys and shift + special characters
             button = event.key;
             if (event.shiftKey && (event.key === "!" || event.key === "?")) {
@@ -75,7 +76,7 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                 keyboardInstance.current.handleButtonClicked(button);
                 return;
             }
-    
+
             switch (event.key) {
                 case "Control":
                     return;
@@ -88,7 +89,7 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                 default:
                     if (!isKeyOnBoard(button)) return;
             }
-    
+
             console.log("Normal Key:", button);
             keyboardInstance.current.handleButtonClicked(button);
         }
@@ -103,15 +104,15 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
     useEffect(() => {
         if (showKeyboard) {
             window.addEventListener('keydown', handleKeyDown);
-            console.log("Keydown listener added"); // Add this line
+            console.log("Keydown listener added");
         } else {
             window.removeEventListener('keydown', handleKeyDown);
-            console.log("Keydown listener removed"); // Add this line
+            console.log("Keydown listener removed");
         }
-    
+
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
-            console.log("Keydown listener removed on cleanup"); // Add this line
+            console.log("Keydown listener removed on cleanup");
         };
     }, [showKeyboard]);
 
@@ -128,20 +129,14 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                     backgroundColor={item["background_color"]}
                 /> :
                 <View>
-                <UtilityButton
-                    onPress={() => {
-                        setShowKeyboard(prev => {
-                            const newValue = !prev;
-                            console.log("showKeyboard changed to:", newValue);
-                            return newValue;
-                        });
-                    }}
-                    boardId={boardId}
-                    label={item.hide_label ? null : "méarchlár (ar fáil)"}
-                    image={item.image}
-                    borderColor={"#D8DAE0"}
-                    backgroundColor={"#E0DED8"}
-                />
+                    <UtilityButton
+                        onPress={() => setShowKeyboard(prev => !prev)}
+                        boardId={boardId}
+                        label={item.hide_label ? null : "méarchlár (ar fáil)"}
+                        image={item.image}
+                        borderColor={"#D8DAE0"}
+                        backgroundColor={"#E0DED8"}
+                    />
                     {showKeyboard && createPortal(
                         <Draggable handle=".drag-handle" defaultPosition={{x: window.innerWidth/2 - 400, y: window.innerHeight/2 - 200}}>
                             <div className="keyboard-container" ref={keyboardRef}>
@@ -157,7 +152,7 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                                         className="simple-keyboard"
                                         layout={{
                                             default: [
-                                                "á é í ó ú",
+                                                "á é í ó ú {phonetic}",
                                                 "1 2 3 4 5 6 7 8 9 0",
                                                 "q w e r t y u i o p",
                                                 "a s d f g h j k l {bksp}",
@@ -166,25 +161,46 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                                                 "{spás}",
                                             ],
                                             shift: [
-                                                "Á É Í Ó Ú",
+                                                "Á É Í Ó Ú {phonetic}",
                                                 "1 2 3 4 5 6 7 8 9 0",
                                                 "Q W E R T Y U I O P",
                                                 "A S D F G H J K L {bksp}",
                                                 "{shift} Z X C V B N M {enter}",
                                                 ", . ! ?",
                                                 "{spás}",
+                                            ],
+                                            phonetic: [
+                                                "a æ ɛ ʌ ɤ u o e i ə {phonetic}", // Vowels
+                                                "bˠ bʲ d̪ˠ dʲ ɟ ɲ ŋ ɡ ɣ", // Consonants
+                                                "sˠ ɕ ç x h fˠ fʲ vʲ", // Fricatives
+                                                "k c pˠ pʲ t̪ˠ tʲ mˠ mʲ", // Stops and Nasals
+                                                "ɾˠ ɾʲ l̪ˠ lˠ l̠ʲ j w", // Liquids and Glides
+                                                "ia ua au {bksp}", // Diphthongs
+                                                "{shift} , . ! ? {enter}",
+                                                "{spás}"
+                                            ],
+                                            phoneticShift: [
+                                                "A Æ Ɛ Ʌ ɤ U O E I Ə {phonetic}",
+                                                "Bˠ Bʲ D̪ˠ Dʲ ɟ ɲ Ŋ Ɣ",
+                                                "Sˠ ɕ Ç X H Fˠ Fʲ Vʲ",
+                                                "K C Pˠ Pʲ T̪ˠ Tʲ Mˠ Mʲ",
+                                                "ɾˠ ɾʲ L̪ˠ Lˠ L̠ʲ J W",
+                                                "IA UA AU {bksp}",
+                                                "{shift} , . ! ? {enter}",
+                                                "{spás}"
                                             ]
                                         }}
-                                        buttonTheme={[{
-                                            class: "special-key",
-                                            buttons: "á é í ó ú Á É Í Ó Ú"
-                                        }]}
                                         display={{
                                             "{enter}": "⮐",
                                             "{bksp}": "⌫",
                                             "{shift}": "⇧",
+                                            "{phonetic}": phoneticMode ? "Qwerty" : "Phonetic",
                                             "{spás}": "[______________________]"
                                         }}
+                                        buttonTheme={[{
+                                            class: "special-key",
+                                            buttons: "{phonetic}"
+                                        }]}
                                         layoutName={layoutName}
                                         onChange={onChange}
                                         onKeyPress={(button) => {
@@ -192,23 +208,21 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                                                 handleShift();
                                                 return;
                                             }
-                                        
+                                            if (button === "{phonetic}") {
+                                                handlePhonetic();
+                                                return;
+                                            }
                                             if (button === "{enter}") {
                                                 if (currentInput.trim()) {
                                                     onKeyPress(currentInput.trim());
-                                                    setCurrentInput(""); // Clear the input state
-                                                    keyboardInstance.current.setInput(""); // Clear the keyboard display
+                                                    setCurrentInput("");
+                                                    keyboardInstance.current.setInput("");
                                                 }
                                                 return;
                                             }
-                                        
                                             setCurrentInput(prev => {
-                                                if (button === "{bksp}") {
-                                                    return prev.slice(0, -1);
-                                                }
-                                                if (button === "{spás}") {
-                                                    return prev + " ";
-                                                }
+                                                if (button === "{bksp}") return prev.slice(0, -1);
+                                                if (button === "{spás}") return prev + " ";
                                                 return prev + button;
                                             });
                                         }}
@@ -225,26 +239,12 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                 </View>
             )
         }
-
-        case "<% PLURAL>": {
-            return (
-                <UtilityButton
-                    onPress={onPluralPress}
-                    boardId={boardId}
-                    label={item.hide_label ? null : "iolra"}
-                    image={item.image}
-                    borderColor={item["border_color"]}
-                    backgroundColor={item["background_color"]}
-                />
-            )
-        }
     }
 }
 
 /**
  * UtilityButton renders the utility button with a label and an optional image.
- * 
- * @param {Object} props - The properties object.
+ * * @param {Object} props - The properties object.
  * @param {Function} props.onPress - The function to execute on button press.
  * @param {string} props.boardId - The ID of the board.
  * @param {string} props.label - The label of the button.
