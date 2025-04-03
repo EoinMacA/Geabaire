@@ -2,7 +2,7 @@ import { StyleSheet } from "react-native"
 import useBoard from "../../state/hooks/useBoard"
 import { useRecoilValue } from "recoil";
 import { settingsState } from "../../state/atoms/settings";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import BoardControls from "../../components/board/BoardControls";
 import useSentence from "../../state/hooks/useSentence";
 import FlatGrid from "../../components/structures/FlatGrid";
@@ -25,6 +25,8 @@ export default function BoardScreen({ navigation, route: { params: { boardId } }
     const setShowImagesInHomebar = (value) => updateSetting("doShowImagesInHomeBar", value);
     // Reference to the text input bar
     const textBarInputRef = useRef(null);
+    // State for keyboard input
+    const [keyboardInput, setKeyboardInput] = useState("");
 
     // Memoised components for performance optimisation
     const boardControls = useMemo(() => <BoardControls navigation={navigation} textBarInputRef={textBarInputRef}/>, [navigation]);
@@ -50,6 +52,7 @@ export default function BoardScreen({ navigation, route: { params: { boardId } }
                         onKeyboardPress={onKeyboardPress}
                         onPluralPress={onPluralPress}
                         boardId={otherImageId ?? boardId}
+                        onKeyPress={handleKeyPress}
                     />
                 )
 
@@ -63,7 +66,7 @@ export default function BoardScreen({ navigation, route: { params: { boardId } }
                 )
             }}
         />
-    }, [board, sentence]);
+    }, [board, sentence, keyboardInput]);
 
     // Function to handle plural press
     async function test() {
@@ -83,6 +86,14 @@ export default function BoardScreen({ navigation, route: { params: { boardId } }
         // Focus text bar input
         if (textBarInputRef.current) {
             textBarInputRef.current.focus();
+        }
+    }
+
+    function handleKeyPress(input) {
+        // When Enter is pressed, we receive the complete input string
+        if (input && typeof input === 'string') {
+            addButtonPress({ label: input });
+            setKeyboardInput(""); // Clear the input after adding to sentence
         }
     }
 

@@ -1,23 +1,120 @@
-import { StyleSheet, View, TouchableOpacity, Text } from "react-native"
+import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import { createPortal } from 'react-dom';
+import Draggable from 'react-draggable';
 import { getContrastingFolderColor, getContrastingTextColor } from "../../partials/accessibility"
 import FAIcon from 'react-native-vector-icons/FontAwesome';
 import { Image } from "expo-image";
 import { Platform } from "react-native";
+import Keyboard from 'react-simple-keyboard';
+import 'react-simple-keyboard/build/css/index.css';
+import './BoardUtilityButton.css';
+import { useState, useRef, useEffect } from 'react';
 
 /**
  * BoardUtilityButton renders a utility button based on the item passed.
- * 
- * @param {Object} props - The properties object.
+ * * @param {Object} props - The properties object.
  * @param {Object} props.item - The utility button item data.
  * @param {Function} props.onKeyboardPress - The function to execute on keyboard press.
  * @param {Function} props.onPluralPress - The function to execute on plural press.
  * @param {string} props.boardId - The ID of the board.
  * @returns {JSX.Element} A TouchableOpacity component representing the utility button.
  */
-export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPress, boardId }) {
+export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPress, boardId, onKeyPress }) {
     const code = item.label.trim()
-
     const isWeb = Platform.OS === "web";
+    const [showKeyboard, setShowKeyboard] = useState(false);
+    const [isShifted, setIsShifted] = useState(false);
+    const [phoneticMode, setPhoneticMode] = useState(false);
+    const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
+    const [currentInput, setCurrentInput] = useState("");
+    const keyboardRef = useRef(null);
+    const keyboardInstance = useRef(null);
+
+    const layoutName = phoneticMode 
+        ? (isShifted ? 'phoneticShift' : 'phonetic')
+        : (isShifted ? 'shift' : 'default');
+
+    const onChange = (input) => {
+        setCurrentInput(input);
+    };
+
+    const handleShift = () => setIsShifted(prev => !prev);
+    const handlePhonetic = () => setPhoneticMode(prev => !prev);
+
+    let altGrPressed = false;
+
+    const handleKeyDown = (event) => {
+        if (isWeb && keyboardInstance.current) {
+            event.preventDefault();
+
+            // Handle Irish characters (for AltGr + vowel) and special characters
+            let button = '';
+            switch (event.key) {
+                case "á": button = "á"; break;
+                case "é": button = "é"; break;
+                case "í": button = "í"; break;
+                case "ó": button = "ó"; break;
+                case "ú": button = "ú"; break;
+                case " ": button = " "; break;
+                case ",": button = ","; break;
+                case ".": button = "."; break;
+                case "!": button = "!"; break;
+                case "?": button = "?"; break;
+                case "Enter": button = "{enter}"; break; // Handle physical Enter key
+            }
+
+            if (button) {
+                console.log("AltGr or Special Key:", button);
+                keyboardInstance.current.handleButtonClicked(button);
+                return;
+            }
+
+            // Handle normal keys and shift + special characters
+            button = event.key;
+            if (event.shiftKey && (event.key === "!" || event.key === "?")) {
+                console.log("Shift + Special Key:", button);
+                keyboardInstance.current.handleButtonClicked(button);
+                return;
+            }
+
+            switch (event.key) {
+                case "Control":
+                    return;
+                case "Shift":
+                    button = "{shift}";
+                    break;
+                case "Backspace":
+                    button = "{bksp}";
+                    break;
+                default:
+                    if (!isKeyOnBoard(button)) return;
+            }
+
+            console.log("Normal Key:", button);
+            keyboardInstance.current.handleButtonClicked(button);
+        }
+    };
+
+    const isKeyOnBoard = (key) => {
+        // Implement logic to check if the key is part of the physical keyboard layout
+        const validKeys = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+        return validKeys.includes(key.toLowerCase());
+    };
+
+    useEffect(() => {
+        if (showKeyboard) {
+            window.addEventListener('keydown', handleKeyDown);
+            console.log("Keydown listener added");
+        } else {
+            window.removeEventListener('keydown', handleKeyDown);
+            console.log("Keydown listener removed");
+        }
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            console.log("Keydown listener removed on cleanup");
+        };
+    }, [showKeyboard]);
 
     switch (code) {
         case "<% KEYBOARD>": {
@@ -31,38 +128,123 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                     borderColor={item["border_color"]}
                     backgroundColor={item["background_color"]}
                 /> :
-                <UtilityButton
-                    onPress={() => { /* Todo: add toast? */}}
-                    boardId={boardId}
-                    label={item.hide_label ? null : "méarchlár (ar fáil)"}
-                    image={item.image}
-                    borderColor={"#D8DAE0"}
-                    backgroundColor={"#E0DED8"}
-                />
-            )
-        }
-
-        case "<% PLURAL>": {
-            return (
-                <UtilityButton
-                    onPress={onPluralPress}
-                    boardId={boardId}
-                    label={item.hide_label ? null : "iolra"}
-                    image={item.image}
-                    borderColor={item["border_color"]}
-                    backgroundColor={item["background_color"]}
-                />
+                <View>
+                    <UtilityButton
+                        onPress={() => setShowKeyboard(prev => !prev)}
+                        boardId={boardId}
+                        label={item.hide_label ? null : "méarchlár (ar fáil)"}
+                        image={item.image}
+                        borderColor={"#D8DAE0"}
+                        backgroundColor={"#E0DED8"}
+                    />
+                    {showKeyboard && createPortal(
+                        <Draggable handle=".drag-handle" defaultPosition={{x: window.innerWidth/2 - 400, y: window.innerHeight/2 - 200}}>
+                            <div className="keyboard-container" ref={keyboardRef}>
+                                <div className="drag-handle">
+                                    <div className="close-button" onClick={() => setShowKeyboard(false)}>
+                                        X
+                                    </div>
+                                </div>
+                                <div className="keyboard-input">{currentInput || " "}</div>
+                                <div className="keyboard-wrapper">
+                                    <Keyboard
+                                        keyboardRef={r => (keyboardInstance.current = r)}
+                                        className="simple-keyboard"
+                                        layout={{
+                                            default: [
+                                                "á é í ó ú {phonetic}",
+                                                "1 2 3 4 5 6 7 8 9 0",
+                                                "q w e r t y u i o p",
+                                                "a s d f g h j k l {bksp}",
+                                                "{shift} z x c v b n m {enter}",
+                                                ", . ! ?",
+                                                "{spás}",
+                                            ],
+                                            shift: [
+                                                "Á É Í Ó Ú {phonetic}",
+                                                "1 2 3 4 5 6 7 8 9 0",
+                                                "Q W E R T Y U I O P",
+                                                "A S D F G H J K L {bksp}",
+                                                "{shift} Z X C V B N M {enter}",
+                                                ", . ! ?",
+                                                "{spás}",
+                                            ],
+                                            phonetic: [
+                                                "a æ ɛ ʌ ɤ u o e i ə {phonetic}", // Vowels
+                                                "bˠ bʲ d̪ˠ dʲ ɟ ɲ ŋ ɡ ɣ", // Consonants
+                                                "sˠ ɕ ç x h fˠ fʲ vʲ", // Fricatives
+                                                "k c pˠ pʲ t̪ˠ tʲ mˠ mʲ", // Stops and Nasals
+                                                "ɾˠ ɾʲ l̪ˠ lˠ l̠ʲ j w", // Liquids and Glides
+                                                "ia ua au {bksp}", // Diphthongs
+                                                "{shift} , . ! ? {enter}",
+                                                "{spás}"
+                                            ],
+                                            phoneticShift: [
+                                                "A Æ Ɛ Ʌ ɤ U O E I Ə {phonetic}",
+                                                "Bˠ Bʲ D̪ˠ Dʲ ɟ ɲ Ŋ Ɣ",
+                                                "Sˠ ɕ Ç X H Fˠ Fʲ Vʲ",
+                                                "K C Pˠ Pʲ T̪ˠ Tʲ Mˠ Mʲ",
+                                                "ɾˠ ɾʲ L̪ˠ Lˠ L̠ʲ J W",
+                                                "IA UA AU {bksp}",
+                                                "{shift} , . ! ? {enter}",
+                                                "{spás}"
+                                            ]
+                                        }}
+                                        display={{
+                                            "{enter}": "⮐",
+                                            "{bksp}": "⌫",
+                                            "{shift}": "⇧",
+                                            "{phonetic}": phoneticMode ? "Qwerty" : "Phonetic",
+                                            "{spás}": "[______________________]"
+                                        }}
+                                        buttonTheme={[{
+                                            class: "special-key",
+                                            buttons: "{phonetic}"
+                                        }]}
+                                        layoutName={layoutName}
+                                        onChange={onChange}
+                                        onKeyPress={(button) => {
+                                            if (button === "{shift}") {
+                                                handleShift();
+                                                return;
+                                            }
+                                            if (button === "{phonetic}") {
+                                                handlePhonetic();
+                                                return;
+                                            }
+                                            if (button === "{enter}") {
+                                                if (currentInput.trim()) {
+                                                    onKeyPress(currentInput.trim());
+                                                    setCurrentInput("");
+                                                    keyboardInstance.current.setInput("");
+                                                }
+                                                return;
+                                            }
+                                            setCurrentInput(prev => {
+                                                if (button === "{bksp}") return prev.slice(0, -1);
+                                                if (button === "{spás}") return prev + " ";
+                                                return prev + button;
+                                            });
+                                        }}
+                                        value={currentInput}
+                                        theme="hg-theme-default hg-layout-default myTheme"
+                                        physicalKeyboardHighlight={true}
+                                        physicalKeyboardHighlightTextColor="#2c5530"
+                                        physicalKeyboardHighlightBgColor="#e8f4ea"
+                                    />
+                                </div>
+                            </div>
+                        </Draggable>
+                    , document.body)}
+                </View>
             )
         }
     }
-
 }
-
 
 /**
  * UtilityButton renders the utility button with a label and an optional image.
- * 
- * @param {Object} props - The properties object.
+ * * @param {Object} props - The properties object.
  * @param {Function} props.onPress - The function to execute on button press.
  * @param {string} props.boardId - The ID of the board.
  * @param {string} props.label - The label of the button.
@@ -74,8 +256,7 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
 function UtilityButton({ onPress, boardId, label, image, borderColor, backgroundColor }) {
     const API_LINK = process.env.EXPO_PUBLIC_GEABAIRE_API_LINK ?? "https://api.geabaire.abair.ie/v1/"
 
-    const imageLink = `${API_LINK}/images/${boardId}/${image}.webp`
-    //console.log(imageLink)
+    const imageLink = '${API_LINK}/images/${boardId}/${image}.webp'
     const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
     const computedStyle = {
         backgroundColor: backgroundColor,
@@ -110,12 +291,9 @@ function UtilityButton({ onPress, boardId, label, image, borderColor, background
                 style={styles.topRight}
                 color={getContrastingFolderColor(backgroundColor)}
             />
-
         </TouchableOpacity>
     )
 }
-
-
 
 // Styles for the BoardUtilityButton and UtilityButton components
 const styles = StyleSheet.create({
