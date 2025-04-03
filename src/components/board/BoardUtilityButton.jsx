@@ -170,12 +170,12 @@ export default function BoardUtilityButton({ item, onKeyboardPress, onPluralPres
                                                 "{spás}",
                                             ],
                                             phonetic: [
-                                                "a æ ɛ ʌ ɤ u o e i ə {phonetic}",
-                                                "bˠ bʲ d̪ˠ dʲ ɟ ɲ ŋ ɡ ɣ",
-                                                "sˠ ɕ ç x h fˠ fʲ vʲ",
-                                                "k c pˠ pʲ t̪ˠ tʲ mˠ mʲ",
-                                                "ɾˠ ɾʲ l̪ˠ lˠ l̠ʲ j w",
-                                                "ia ua au {bksp}",
+                                                "a æ ɛ ʌ ɤ u o e i ə {phonetic}", // Vowels
+                                                "bˠ bʲ d̪ˠ dʲ ɟ ɲ ŋ ɡ ɣ", // Consonants
+                                                "sˠ ɕ ç x h fˠ fʲ vʲ", // Fricatives
+                                                "k c pˠ pʲ t̪ˠ tʲ mˠ mʲ", // Stops and Nasals
+                                                "ɾˠ ɾʲ l̪ˠ lˠ l̠ʲ j w", // Liquids and Glides
+                                                "ia ua au {bksp}", // Diphthongs
                                                 "{shift} , . ! ? {enter}",
                                                 "{spás}"
                                             ],
